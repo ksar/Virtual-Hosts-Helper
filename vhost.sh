@@ -5,10 +5,10 @@
 ####################################################################
 #
 # Path to web root (with trailing slash)
-web_root_path="/Users/jimmygle/Sites/"
+web_root_path="/Users/ksar/www/"
 #
 # Path to vhosts config file
-vhost_path="/Applications/MAMP/conf/apache/vhosts.conf"
+vhost_path="/etc/apache2/extra/httpd-vhosts.conf"
 #
 # Path to hosts file
 hosts_path="/private/etc/hosts"
@@ -17,10 +17,10 @@ hosts_path="/private/etc/hosts"
 dns_flush="dscacheutil -flushcache"
 #
 # Apache restart command
-apache_restart="/Applications/MAMP/bin/apache2/bin/apachectl restart"
+apache_restart="apachectl restart"
 #
 # Apache's port (8888 is MAMP's default)
-apache_port="8888"
+apache_port="80"
 #
 ####################################################################
 echo ""
@@ -49,17 +49,30 @@ fi
 # New site domain and directory
 echo "New local domain (eg projectname.local)?"
 read local_domain
+if [ ! $local_domain ]; then
+	echo "WOOPS, local domain cat not be empty!"
+	echo ""
+	exit 1
+fi
+
 echo "Directory new local domain points to (located in $web_root_path)?"
 read local_directory
 
+if [ ! $local_directory ]; then
+	local_directory=$local_domain	
+fi
+
 # Create directory new local domain points to
 mkdir -p "$web_root_path$local_directory"
+echo "created directory $web_root_path$local_directory"
 
 # Add entry to vhosts file and run restart command
 echo "
 <VirtualHost *:$apache_port>
     ServerName $local_domain
     DocumentRoot $web_root_path$local_directory/
+    ErrorLog "/private/var/log/apache2/$local_domain-error_log"
+    CustomLog "/private/var/log/apache2/$local_domain-access_log" common
     <Directory $web_root_path$local_directory/>
         Options Indexes FollowSymLinks MultiViews
         AllowOverride All
@@ -71,8 +84,7 @@ $apache_restart
 echo "vhosts file updated: $vhost_path"
 
 # Add entry to hosts file
-echo "
-127.0.0.1	$local_domain
+echo "127.0.0.1	$local_domain
 " >> $hosts_path
 $dns_flush
 echo "hosts file updated: $dns_flush"
